@@ -70,14 +70,11 @@ function showToast(msg) {
 function toDate(e) {
   return new Date(`${e.event_date}T${e.event_time || "00:00"}:00`);
 }
-
 function isPast(e) { return toDate(e) < new Date(); }
-
 function formatDate(d) {
   return new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" })
     .format(new Date(`${d}T12:00:00`));
 }
-
 function formatTime(t) {
   const [h, m] = (t || "00:00").split(":").map(Number);
   return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" })
@@ -125,11 +122,9 @@ function render() {
   const needs = allEvents.filter((e) => !isPast(e) && !e.driver_user_id);
   els.needsBanner.hidden = needs.length === 0;
   els.needsText.textContent = `${needs.length} ${needs.length === 1 ? "ride needs" : "rides need"} drivers`;
-
   const list = visibleEvents();
   els.events.innerHTML = list.map(cardHtml).join("");
   els.empty.hidden = list.length > 0;
-
   $$('[data-open]').forEach((b) => b.addEventListener("click", () => openDetails(b.dataset.open)));
   $$('[data-claim]').forEach((b) => b.addEventListener("click", () => claimRide(b.dataset.claim)));
 }
@@ -165,19 +160,8 @@ async function handleSession(session) {
   }
 
   currentUser = session.user;
-  const email = currentUser.email.trim().toLowerCase();
-
-  const { data: allowed, error: inviteError } = await sb.rpc("is_invited_email", { check_email: email });
-  if (inviteError || !allowed) {
-    await sb.auth.signOut();
-    els.loginMsg.textContent = "This email is not on the family access list.";
-    return;
-  }
-
-  const { data: member, error } = await sb.from("family_members")
-    .select("email,display_name")
-    .ilike("email", email)
-    .maybeSingle();
+  const { data: rows, error } = await sb.rpc("get_my_family_profile");
+  const member = Array.isArray(rows) ? rows[0] : null;
 
   if (error || !member) {
     await sb.auth.signOut();
@@ -246,11 +230,9 @@ els.eventForm.addEventListener("submit", async (ev) => {
     notes: els.notes.value.trim() || null,
     updated_at: new Date().toISOString()
   };
-
   const result = els.eventId.value
     ? await sb.from("events").update(payload).eq("id", els.eventId.value)
     : await sb.from("events").insert({ ...payload, created_by: currentUser.id });
-
   if (result.error) return showToast(result.error.message);
   els.eventDialog.close();
   showToast("Saved.");
@@ -260,7 +242,6 @@ els.eventForm.addEventListener("submit", async (ev) => {
 async function openDetails(id) {
   selectedEvent = allEvents.find((e) => e.id === id);
   if (!selectedEvent) return;
-
   els.detailPerson.textContent = selectedEvent.person;
   els.detailTitle.textContent = selectedEvent.title;
   els.detailBody.innerHTML = `
@@ -277,7 +258,6 @@ async function openDetails(id) {
     els.driverBox.innerHTML = `<p><strong>DRIVER NEEDED</strong></p>${!isPast(selectedEvent) ? '<button id="claimDetailBtn" type="button">I can drive</button>' : ""}`;
     $("#claimDetailBtn")?.addEventListener("click", () => claimRide(selectedEvent.id));
   }
-
   els.detailDialog.showModal();
 }
 
@@ -336,10 +316,6 @@ els.nameForm.addEventListener("submit", async (ev) => {
   ev.preventDefault();
   const name = els.displayName.value.trim();
   if (!name) return;
-  const { error } = await sb.from("family_members")
-    .update({ display_name: name })
-    .ilike("email", currentUser.email.trim().toLowerCase());
-  if (error) return showToast(error.message);
   profile.display_name = name;
   els.nameDialog.close();
   showToast("Saved.");
