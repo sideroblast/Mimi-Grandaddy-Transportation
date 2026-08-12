@@ -14,7 +14,7 @@
       <button id="sendCodeBtn" type="submit">Send sign-in code</button>
     </form>
     <form id="codeForm" hidden>
-      <label>6-digit code<input id="otpCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="123456" required></label>
+      <label>Sign-in code<input id="otpCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]+" placeholder="Enter the code from your email" required></label>
       <button type="submit">Sign in</button>
       <button id="changeEmailBtn" type="button" class="secondary">Use a different email</button>
     </form>
