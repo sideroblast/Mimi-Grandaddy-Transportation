@@ -26,6 +26,7 @@ let realtimeChannel = null;
 const esc = (v = "") => String(v).replace(/[&<>"']/g, (m) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const toDate = (e) => new Date(`${e.event_date}T${e.event_time || "00:00"}:00`);
 const isPast = (e) => toDate(e) < new Date();
+const isCovered = (e) => Boolean(e.driver_user_id || e.agency_covered);
 
 function showToast(msg) {
   els.toast.textContent = msg;
@@ -59,27 +60,37 @@ function setView(view) {
 function visibleEvents() {
   const sorted = [...allEvents].sort((a,b) => toDate(a) - toDate(b));
   if (currentView === "upcoming") return sorted.filter((e) => !isPast(e));
-  if (currentView === "needs") return sorted.filter((e) => !isPast(e) && !e.driver_user_id);
+  if (currentView === "needs") return sorted.filter((e) => !isPast(e) && !isCovered(e));
   if (currentView === "mine") return sorted.filter((e) => !isPast(e) && e.driver_user_id === currentUser?.id);
   return sorted;
 }
 
 function cardHtml(e) {
   const cls = e.person === "Mimi" ? "mimi" : "grandaddy";
-  const status = e.driver_user_id
-    ? `<strong class="covered">✓ ${esc(e.driver_name || "Ride covered")} is driving</strong>`
-    : `<strong class="needed">DRIVER NEEDED</strong>`;
-  const claim = !e.driver_user_id && !isPast(e) ? `<button type="button" data-claim="${e.id}">I can drive</button>` : "";
-  return `<article class="event-card ${cls}">
-    <div><span class="person">${esc(e.person)}</span><span class="when">${formatDate(e.event_date)} · ${formatTime(e.event_time)}</span></div>
+  let status;
+  if (e.agency_covered) {
+    status = `<strong class="covered">✓ Agency is covering transportation</strong>`;
+  } else if (e.driver_user_id) {
+    status = `<strong class="covered">✓ ${esc(e.driver_name || "Ride covered")} is driving</strong>`;
+  } else {
+    status = `<strong class="needed-text">DRIVER NEEDED</strong>`;
+  }
+
+  let actions = "";
+  if (!isCovered(e) && !isPast(e)) {
+    actions = `<button type="button" data-claim="${e.id}">I can drive</button><button type="button" class="secondary" data-agency="${e.id}">Agency</button>`;
+  }
+
+  return `<article class="card ${cls}">
+    <div class="top"><span class="person">${esc(e.person)}</span><span class="when">${formatDate(e.event_date)} · ${formatTime(e.event_time)}</span></div>
     <h3>${esc(e.title)}</h3>
-    ${e.location ? `<p class="muted">${esc(e.location)}</p>` : ""}
-    <div class="ride-row">${status}<div>${claim}<button type="button" class="secondary" data-open="${e.id}">Details</button></div></div>
+    ${e.location ? `<p class="location">${esc(e.location)}</p>` : ""}
+    <div class="ride">${status}<div class="card-actions">${actions}<button type="button" class="secondary" data-open="${e.id}">Details</button></div></div>
   </article>`;
 }
 
 function render() {
-  const needs = allEvents.filter((e) => !isPast(e) && !e.driver_user_id);
+  const needs = allEvents.filter((e) => !isPast(e) && !isCovered(e));
   els.needsBanner.hidden = needs.length === 0;
   els.needsText.textContent = `${needs.length} ${needs.length === 1 ? "ride needs" : "rides need"} drivers`;
   const list = visibleEvents();
@@ -87,6 +98,7 @@ function render() {
   els.empty.hidden = list.length > 0;
   $$('[data-open]').forEach((b) => b.addEventListener("click", () => openDetails(b.dataset.open)));
   $$('[data-claim]').forEach((b) => b.addEventListener("click", () => claimRide(b.dataset.claim)));
+  $$('[data-agency]').forEach((b) => b.addEventListener("click", () => markAgency(b.dataset.agency)));
 }
 
 async function loadEvents() {
@@ -128,17 +140,11 @@ async function handleSession(session) {
   }
 
   const storageKey = `familyDisplayName:${email}`;
-  profile = {
-    email,
-    display_name: localStorage.getItem(storageKey) || ""
-  };
+  profile = { email, display_name: localStorage.getItem(storageKey) || "" };
 
   els.login.hidden = true;
   els.app.hidden = false;
-
-  if (!profile.display_name) {
-    els.nameDialog.showModal();
-  }
+  if (!profile.display_name) els.nameDialog.showModal();
 
   await loadEvents();
   subscribeRealtime();
@@ -160,10 +166,7 @@ els.loginForm.addEventListener("submit", async (ev) => {
   }
 
   els.loginMsg.textContent = "Sending sign-in link…";
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options:{ emailRedirectTo: window.location.href, shouldCreateUser:true }
-  });
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: window.location.href, shouldCreateUser:true } });
   els.loginMsg.textContent = error ? error.message : "Check your email and tap the sign-in link.";
 });
 
@@ -199,7 +202,7 @@ els.eventForm.addEventListener("submit", async (ev) => {
   };
   const result = els.eventId.value
     ? await sb.from("events").update(payload).eq("id",els.eventId.value)
-    : await sb.from("events").insert({...payload,created_by:currentUser.id});
+    : await sb.from("events").insert({...payload,created_by:currentUser.id,agency_covered:false});
   if (result.error) return showToast(result.error.message);
   els.eventDialog.close();
   showToast("Saved.");
@@ -217,13 +220,17 @@ async function openDetails(id) {
     ${selectedEvent.location ? `<p>📍 ${esc(selectedEvent.location)}</p>` : ""}
     ${selectedEvent.notes ? `<p>📝 ${esc(selectedEvent.notes)}</p>` : ""}`;
 
-  if (selectedEvent.driver_user_id) {
+  if (selectedEvent.agency_covered) {
+    els.driverBox.innerHTML = `<p><strong>✓ Agency is covering transportation</strong></p><button id="removeAgencyBtn" type="button" class="secondary">Agency is no longer covering this ride</button>`;
+    $("#removeAgencyBtn")?.addEventListener("click", () => unmarkAgency(selectedEvent.id));
+  } else if (selectedEvent.driver_user_id) {
     const mine = selectedEvent.driver_user_id === currentUser.id;
     els.driverBox.innerHTML = `<p><strong>✓ ${esc(selectedEvent.driver_name || "Someone")} is driving</strong></p>${mine ? '<button id="unclaimBtn" type="button" class="secondary">I can\'t drive anymore</button>' : ""}`;
     $("#unclaimBtn")?.addEventListener("click", () => unclaimRide(selectedEvent.id));
   } else {
-    els.driverBox.innerHTML = `<p><strong>DRIVER NEEDED</strong></p>${!isPast(selectedEvent) ? '<button id="claimDetailBtn" type="button">I can drive</button>' : ""}`;
+    els.driverBox.innerHTML = `<p><strong>DRIVER NEEDED</strong></p>${!isPast(selectedEvent) ? '<button id="claimDetailBtn" type="button">I can drive</button><button id="agencyDetailBtn" type="button" class="secondary">Agency</button>' : ""}`;
     $("#claimDetailBtn")?.addEventListener("click", () => claimRide(selectedEvent.id));
+    $("#agencyDetailBtn")?.addEventListener("click", () => markAgency(selectedEvent.id));
   }
   els.detailDialog.showModal();
 }
@@ -236,10 +243,10 @@ async function claimRide(id) {
     return;
   }
   const { data, error } = await sb.from("events")
-    .update({driver_user_id:currentUser.id,driver_name:profile.display_name,updated_at:new Date().toISOString()})
-    .eq("id",id).is("driver_user_id",null).select().maybeSingle();
+    .update({driver_user_id:currentUser.id,driver_name:profile.display_name,agency_covered:false,updated_at:new Date().toISOString()})
+    .eq("id",id).is("driver_user_id",null).eq("agency_covered",false).select().maybeSingle();
   if (error) return showToast(error.message);
-  if (!data) return showToast("Someone else just claimed this ride.");
+  if (!data) return showToast("This ride was just covered by someone else.");
   els.detailDialog.close();
   showToast("Thank you!");
   await loadEvents();
@@ -252,6 +259,27 @@ async function unclaimRide(id) {
   if (error) return showToast(error.message);
   els.detailDialog.close();
   showToast("Ride released.");
+  await loadEvents();
+}
+
+async function markAgency(id) {
+  const { data, error } = await sb.from("events")
+    .update({agency_covered:true,driver_user_id:null,driver_name:null,updated_at:new Date().toISOString()})
+    .eq("id",id).is("driver_user_id",null).eq("agency_covered",false).select().maybeSingle();
+  if (error) return showToast(error.message);
+  if (!data) return showToast("This ride was just covered by someone else.");
+  els.detailDialog.close();
+  showToast("Agency transportation noted.");
+  await loadEvents();
+}
+
+async function unmarkAgency(id) {
+  const { error } = await sb.from("events")
+    .update({agency_covered:false,updated_at:new Date().toISOString()})
+    .eq("id",id).eq("agency_covered",true);
+  if (error) return showToast(error.message);
+  els.detailDialog.close();
+  showToast("Agency coverage removed.");
   await loadEvents();
 }
 
