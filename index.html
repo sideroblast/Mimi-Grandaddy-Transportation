@@ -38,12 +38,15 @@
     <input id="eventId" type="hidden"><div class="form-grid">
       <label>Who<select id="person"><option>Mimi</option><option>Grandaddy</option></select></label>
       <label>Appointment or errand<input id="title" required></label>
-      <label>Date<input id="date" type="date" required></label><label>Time<input id="time" type="time" required></label>
+      <label>Date<input id="date" type="date" required></label><label>Appointment time<input id="time" type="time" required></label>
+      <label>Pickup / leave time <span class="muted">(optional)</span><input id="pickupTime" type="time"></label>
       <label class="full">Location<input id="location"></label><label class="full">Notes<textarea id="notes" rows="3"></textarea></label>
     </div><div class="actions"><button id="deleteBtn" type="button" class="danger" hidden>Delete</button><span></span><button type="button" id="cancelEvent" class="secondary">Cancel</button><button>Save Event</button></div>
   </form></dialog>
 
   <dialog id="detailDialog"><section><div class="dialog-head"><div><p id="detailPerson" class="person"></p><h2 id="detailTitle"></h2></div><button id="closeDetail" class="x">×</button></div><div id="detailBody"></div><div id="driverBox"></div><div class="actions"><button id="calendarBtn" class="secondary">Add to calendar</button><span></span><button id="editBtn" class="secondary">Edit</button></div></section></dialog>
+
+  <dialog id="agencyDialog"><form id="agencyForm"><div class="dialog-head"><h2>Agency transportation</h2><button type="button" id="closeAgency" class="x">×</button></div><p class="muted">Enter the agency name if known. You can leave this blank.</p><label>Agency name <span class="muted">(optional)</span><input id="agencyName" autocomplete="organization" placeholder="e.g. Bluegrass Senior Transport"></label><div class="actions"><span></span><button type="button" id="cancelAgency" class="secondary">Cancel</button><button type="submit">Mark as covered</button></div></form></dialog>
 
   <dialog id="nameDialog"><form id="nameForm"><h2>What should we call you?</h2><label>Your name<input id="displayName" required></label><div class="actions"><span></span><button>Continue</button></div></form></dialog>
   <div id="toast" class="toast" hidden></div>
