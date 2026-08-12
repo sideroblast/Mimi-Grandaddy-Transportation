@@ -6,45 +6,14 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
 const els = {
-  login: $("#login"),
-  app: $("#app"),
-  loginForm: $("#loginForm"),
-  email: $("#email"),
-  loginMsg: $("#loginMsg"),
-  signOut: $("#signOut"),
-  needsBanner: $("#needsBanner"),
-  needsText: $("#needsText"),
-  addBtn: $("#addBtn"),
-  mobileAdd: $("#mobileAdd"),
-  viewTitle: $("#viewTitle"),
-  viewHelp: $("#viewHelp"),
-  events: $("#events"),
-  empty: $("#empty"),
-  eventDialog: $("#eventDialog"),
-  eventForm: $("#eventForm"),
-  eventHeading: $("#eventHeading"),
-  eventId: $("#eventId"),
-  person: $("#person"),
-  title: $("#title"),
-  date: $("#date"),
-  time: $("#time"),
-  location: $("#location"),
-  notes: $("#notes"),
-  deleteBtn: $("#deleteBtn"),
-  closeEvent: $("#closeEvent"),
-  cancelEvent: $("#cancelEvent"),
-  detailDialog: $("#detailDialog"),
-  detailPerson: $("#detailPerson"),
-  detailTitle: $("#detailTitle"),
-  detailBody: $("#detailBody"),
-  driverBox: $("#driverBox"),
-  closeDetail: $("#closeDetail"),
-  calendarBtn: $("#calendarBtn"),
-  editBtn: $("#editBtn"),
-  nameDialog: $("#nameDialog"),
-  nameForm: $("#nameForm"),
-  displayName: $("#displayName"),
-  toast: $("#toast")
+  login: $("#login"), app: $("#app"), loginForm: $("#loginForm"), email: $("#email"), loginMsg: $("#loginMsg"),
+  signOut: $("#signOut"), needsBanner: $("#needsBanner"), needsText: $("#needsText"), addBtn: $("#addBtn"), mobileAdd: $("#mobileAdd"),
+  viewTitle: $("#viewTitle"), viewHelp: $("#viewHelp"), events: $("#events"), empty: $("#empty"), eventDialog: $("#eventDialog"),
+  eventForm: $("#eventForm"), eventHeading: $("#eventHeading"), eventId: $("#eventId"), person: $("#person"), title: $("#title"),
+  date: $("#date"), time: $("#time"), location: $("#location"), notes: $("#notes"), deleteBtn: $("#deleteBtn"), closeEvent: $("#closeEvent"),
+  cancelEvent: $("#cancelEvent"), detailDialog: $("#detailDialog"), detailPerson: $("#detailPerson"), detailTitle: $("#detailTitle"),
+  detailBody: $("#detailBody"), driverBox: $("#driverBox"), closeDetail: $("#closeDetail"), calendarBtn: $("#calendarBtn"), editBtn: $("#editBtn"),
+  nameDialog: $("#nameDialog"), nameForm: $("#nameForm"), displayName: $("#displayName"), toast: $("#toast")
 };
 
 let currentUser = null;
@@ -54,11 +23,9 @@ let currentView = "upcoming";
 let selectedEvent = null;
 let realtimeChannel = null;
 
-function esc(v = "") {
-  return String(v).replace(/[&<>"']/g, (m) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  }[m]));
-}
+const esc = (v = "") => String(v).replace(/[&<>"']/g, (m) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const toDate = (e) => new Date(`${e.event_date}T${e.event_time || "00:00"}:00`);
+const isPast = (e) => toDate(e) < new Date();
 
 function showToast(msg) {
   els.toast.textContent = msg;
@@ -67,28 +34,22 @@ function showToast(msg) {
   showToast.timer = setTimeout(() => { els.toast.hidden = true; }, 2500);
 }
 
-function toDate(e) {
-  return new Date(`${e.event_date}T${e.event_time || "00:00"}:00`);
-}
-function isPast(e) { return toDate(e) < new Date(); }
 function formatDate(d) {
-  return new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" })
-    .format(new Date(`${d}T12:00:00`));
+  return new Intl.DateTimeFormat(undefined,{weekday:"short",month:"short",day:"numeric"}).format(new Date(`${d}T12:00:00`));
 }
 function formatTime(t) {
-  const [h, m] = (t || "00:00").split(":").map(Number);
-  return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" })
-    .format(new Date(2000, 0, 1, h, m));
+  const [h,m] = (t || "00:00").split(":").map(Number);
+  return new Intl.DateTimeFormat(undefined,{hour:"numeric",minute:"2-digit"}).format(new Date(2000,0,1,h,m));
 }
 
 function setView(view) {
   currentView = view;
   $$('[data-view]').forEach((b) => b.classList.toggle("active", b.dataset.view === view));
   const meta = {
-    upcoming: ["Upcoming", "Appointments and errands for Mimi and Grandaddy."],
-    needs: ["Needs Driver", "Upcoming events that still need transportation."],
-    mine: ["My Rides", "Transportation you have signed up to provide."],
-    all: ["All Events", "Upcoming and past events."]
+    upcoming:["Upcoming","Appointments and errands for Mimi and Grandaddy."],
+    needs:["Needs Driver","Upcoming events that still need transportation."],
+    mine:["My Rides","Transportation you have signed up to provide."],
+    all:["All Events","Upcoming and past events."]
   };
   els.viewTitle.textContent = meta[view][0];
   els.viewHelp.textContent = meta[view][1];
@@ -96,7 +57,7 @@ function setView(view) {
 }
 
 function visibleEvents() {
-  const sorted = [...allEvents].sort((a, b) => toDate(a) - toDate(b));
+  const sorted = [...allEvents].sort((a,b) => toDate(a) - toDate(b));
   if (currentView === "upcoming") return sorted.filter((e) => !isPast(e));
   if (currentView === "needs") return sorted.filter((e) => !isPast(e) && !e.driver_user_id);
   if (currentView === "mine") return sorted.filter((e) => !isPast(e) && e.driver_user_id === currentUser?.id);
@@ -108,8 +69,7 @@ function cardHtml(e) {
   const status = e.driver_user_id
     ? `<strong class="covered">✓ ${esc(e.driver_name || "Ride covered")} is driving</strong>`
     : `<strong class="needed">DRIVER NEEDED</strong>`;
-  const claim = !e.driver_user_id && !isPast(e)
-    ? `<button type="button" data-claim="${e.id}">I can drive</button>` : "";
+  const claim = !e.driver_user_id && !isPast(e) ? `<button type="button" data-claim="${e.id}">I can drive</button>` : "";
   return `<article class="event-card ${cls}">
     <div><span class="person">${esc(e.person)}</span><span class="when">${formatDate(e.event_date)} · ${formatTime(e.event_time)}</span></div>
     <h3>${esc(e.title)}</h3>
@@ -130,9 +90,7 @@ function render() {
 }
 
 async function loadEvents() {
-  const { data, error } = await sb.from("events").select("*")
-    .order("event_date", { ascending: true })
-    .order("event_time", { ascending: true });
+  const { data, error } = await sb.from("events").select("*").order("event_date",{ascending:true}).order("event_time",{ascending:true});
   if (error) return showToast(error.message);
   allEvents = data || [];
   render();
@@ -141,7 +99,7 @@ async function loadEvents() {
 function subscribeRealtime() {
   if (realtimeChannel) return;
   realtimeChannel = sb.channel("events-changes")
-    .on("postgres_changes", { event: "*", schema: "public", table: "events" }, loadEvents)
+    .on("postgres_changes",{event:"*",schema:"public",table:"events"},loadEvents)
     .subscribe();
 }
 
@@ -160,19 +118,28 @@ async function handleSession(session) {
   }
 
   currentUser = session.user;
-  const { data: rows, error } = await sb.rpc("get_my_family_profile");
-  const member = Array.isArray(rows) ? rows[0] : null;
+  const email = (currentUser.email || "").trim().toLowerCase();
+  const { data: allowed, error } = await sb.rpc("is_invited_email", { check_email: email });
 
-  if (error || !member) {
+  if (error || !allowed) {
     await sb.auth.signOut();
     els.loginMsg.textContent = "This email is not on the family access list.";
     return;
   }
 
-  profile = member;
+  const storageKey = `familyDisplayName:${email}`;
+  profile = {
+    email,
+    display_name: localStorage.getItem(storageKey) || ""
+  };
+
   els.login.hidden = true;
   els.app.hidden = false;
-  if (!profile.display_name) els.nameDialog.showModal();
+
+  if (!profile.display_name) {
+    els.nameDialog.showModal();
+  }
+
   await loadEvents();
   subscribeRealtime();
 }
@@ -195,7 +162,7 @@ els.loginForm.addEventListener("submit", async (ev) => {
   els.loginMsg.textContent = "Sending sign-in link…";
   const { error } = await sb.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: window.location.href, shouldCreateUser: true }
+    options:{ emailRedirectTo: window.location.href, shouldCreateUser:true }
   });
   els.loginMsg.textContent = error ? error.message : "Check your email and tap the sign-in link.";
 });
@@ -209,7 +176,7 @@ function openNewEvent() {
   els.eventForm.reset();
   els.eventId.value = "";
   els.person.value = "Mimi";
-  els.date.value = new Date().toISOString().slice(0, 10);
+  els.date.value = new Date().toISOString().slice(0,10);
   els.deleteBtn.hidden = true;
   els.eventDialog.showModal();
 }
@@ -231,8 +198,8 @@ els.eventForm.addEventListener("submit", async (ev) => {
     updated_at: new Date().toISOString()
   };
   const result = els.eventId.value
-    ? await sb.from("events").update(payload).eq("id", els.eventId.value)
-    : await sb.from("events").insert({ ...payload, created_by: currentUser.id });
+    ? await sb.from("events").update(payload).eq("id",els.eventId.value)
+    : await sb.from("events").insert({...payload,created_by:currentUser.id});
   if (result.error) return showToast(result.error.message);
   els.eventDialog.close();
   showToast("Saved.");
@@ -269,8 +236,8 @@ async function claimRide(id) {
     return;
   }
   const { data, error } = await sb.from("events")
-    .update({ driver_user_id: currentUser.id, driver_name: profile.display_name, updated_at: new Date().toISOString() })
-    .eq("id", id).is("driver_user_id", null).select().maybeSingle();
+    .update({driver_user_id:currentUser.id,driver_name:profile.display_name,updated_at:new Date().toISOString()})
+    .eq("id",id).is("driver_user_id",null).select().maybeSingle();
   if (error) return showToast(error.message);
   if (!data) return showToast("Someone else just claimed this ride.");
   els.detailDialog.close();
@@ -280,8 +247,8 @@ async function claimRide(id) {
 
 async function unclaimRide(id) {
   const { error } = await sb.from("events")
-    .update({ driver_user_id: null, driver_name: null, updated_at: new Date().toISOString() })
-    .eq("id", id).eq("driver_user_id", currentUser.id);
+    .update({driver_user_id:null,driver_name:null,updated_at:new Date().toISOString()})
+    .eq("id",id).eq("driver_user_id",currentUser.id);
   if (error) return showToast(error.message);
   els.detailDialog.close();
   showToast("Ride released.");
@@ -296,7 +263,7 @@ els.editBtn.addEventListener("click", () => {
   els.person.value = selectedEvent.person;
   els.title.value = selectedEvent.title;
   els.date.value = selectedEvent.event_date;
-  els.time.value = (selectedEvent.event_time || "").slice(0, 5);
+  els.time.value = (selectedEvent.event_time || "").slice(0,5);
   els.location.value = selectedEvent.location || "";
   els.notes.value = selectedEvent.notes || "";
   els.deleteBtn.hidden = false;
@@ -305,7 +272,7 @@ els.editBtn.addEventListener("click", () => {
 
 els.deleteBtn.addEventListener("click", async () => {
   if (!els.eventId.value || !confirm("Delete this event?")) return;
-  const { error } = await sb.from("events").delete().eq("id", els.eventId.value);
+  const { error } = await sb.from("events").delete().eq("id",els.eventId.value);
   if (error) return showToast(error.message);
   els.eventDialog.close();
   showToast("Deleted.");
@@ -317,24 +284,25 @@ els.nameForm.addEventListener("submit", async (ev) => {
   const name = els.displayName.value.trim();
   if (!name) return;
   profile.display_name = name;
+  localStorage.setItem(`familyDisplayName:${profile.email}`, name);
   els.nameDialog.close();
   showToast("Saved.");
 });
 
 els.calendarBtn.addEventListener("click", () => {
   if (!selectedEvent) return;
-  const start = `${selectedEvent.event_date.replaceAll("-", "")}T${(selectedEvent.event_time || "00:00").replace(":", "")}00`;
-  const endDate = new Date(toDate(selectedEvent).getTime() + 60 * 60 * 1000);
-  const pad = (n) => String(n).padStart(2, "0");
-  const end = `${endDate.getFullYear()}${pad(endDate.getMonth() + 1)}${pad(endDate.getDate())}T${pad(endDate.getHours())}${pad(endDate.getMinutes())}00`;
+  const start = `${selectedEvent.event_date.replaceAll("-","")}T${(selectedEvent.event_time || "00:00").replace(":","")}00`;
+  const endDate = new Date(toDate(selectedEvent).getTime() + 60*60*1000);
+  const pad = (n) => String(n).padStart(2,"0");
+  const end = `${endDate.getFullYear()}${pad(endDate.getMonth()+1)}${pad(endDate.getDate())}T${pad(endDate.getHours())}${pad(endDate.getMinutes())}00`;
   const body = [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Family Transportation//EN", "BEGIN:VEVENT",
-    `DTSTART:${start}`, `DTEND:${end}`, `SUMMARY:${selectedEvent.person}: ${selectedEvent.title}`,
-    `LOCATION:${selectedEvent.location || ""}`, `DESCRIPTION:${(selectedEvent.notes || "").replace(/\n/g, "\\n")}`,
-    "END:VEVENT", "END:VCALENDAR"
+    "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Family Transportation//EN","BEGIN:VEVENT",
+    `DTSTART:${start}`,`DTEND:${end}`,`SUMMARY:${selectedEvent.person}: ${selectedEvent.title}`,
+    `LOCATION:${selectedEvent.location || ""}`,`DESCRIPTION:${(selectedEvent.notes || "").replace(/\n/g,"\\n")}`,
+    "END:VEVENT","END:VCALENDAR"
   ].join("\r\n");
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([body], { type: "text/calendar" }));
+  a.href = URL.createObjectURL(new Blob([body],{type:"text/calendar"}));
   a.download = `${selectedEvent.person}-${selectedEvent.event_date}.ics`;
   a.click();
   URL.revokeObjectURL(a.href);
