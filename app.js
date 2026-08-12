@@ -165,9 +165,18 @@ async function handleSession(session) {
   }
 
   currentUser = session.user;
+  const email = currentUser.email.trim().toLowerCase();
+
+  const { data: allowed, error: inviteError } = await sb.rpc("is_invited_email", { check_email: email });
+  if (inviteError || !allowed) {
+    await sb.auth.signOut();
+    els.loginMsg.textContent = "This email is not on the family access list.";
+    return;
+  }
+
   const { data: member, error } = await sb.from("family_members")
     .select("email,display_name")
-    .eq("email", currentUser.email.toLowerCase())
+    .ilike("email", email)
     .maybeSingle();
 
   if (error || !member) {
@@ -329,7 +338,7 @@ els.nameForm.addEventListener("submit", async (ev) => {
   if (!name) return;
   const { error } = await sb.from("family_members")
     .update({ display_name: name })
-    .eq("email", currentUser.email.toLowerCase());
+    .ilike("email", currentUser.email.trim().toLowerCase());
   if (error) return showToast(error.message);
   profile.display_name = name;
   els.nameDialog.close();
