@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Mimi & Grandaddy Transportation</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <section id="login" class="center-card">
+    <div class="car">🚗</div><h1>Mimi & Grandaddy</h1><p>Transportation Schedule</p>
+    <form id="loginForm"><label>Family email<input id="email" type="email" required></label><button>Email me a sign-in link</button></form>
+    <p id="loginMsg" class="muted"></p>
+  </section>
+
+  <div id="app" hidden>
+    <header><div><h1>Mimi & Grandaddy</h1><p><span class="mimi-dot"></span>Mimi &nbsp; <span class="grandaddy-dot"></span>Grandaddy</p></div><button id="signOut" class="secondary">Sign out</button></header>
+    <main>
+      <button id="needsBanner" class="needs" hidden>🚗 <strong id="needsText"></strong><span>View rides needing drivers ›</span></button>
+      <div class="toolbar"><div class="tabs">
+        <button data-view="upcoming" class="active">Upcoming</button><button data-view="needs">Needs Driver</button><button data-view="mine">My Rides</button><button data-view="all">All Events</button>
+      </div><button id="addBtn">+ Add Event</button></div>
+      <h2 id="viewTitle">Upcoming</h2><p id="viewHelp" class="muted">Appointments and errands for Mimi and Grandaddy.</p>
+      <div id="events" class="grid"></div><div id="empty" class="empty" hidden>🗓️<h3>No events here</h3></div>
+    </main>
+    <nav><button data-view="upcoming">⌂<small>Home</small></button><button data-view="needs">🚗<small>Needs Driver</small></button><button id="mobileAdd">＋<small>Add Event</small></button><button data-view="mine">✓<small>My Rides</small></button><button data-view="all">☰<small>All</small></button></nav>
+  </div>
+
+  <dialog id="eventDialog"><form id="eventForm"><div class="dialog-head"><h2 id="eventHeading">Add Event</h2><button type="button" id="closeEvent" class="x">×</button></div>
+    <input id="eventId" type="hidden"><div class="form-grid">
+      <label>Who<select id="person"><option>Mimi</option><option>Grandaddy</option></select></label>
+      <label>Appointment or errand<input id="title" required></label>
+      <label>Date<input id="date" type="date" required></label><label>Time<input id="time" type="time" required></label>
+      <label class="full">Location<input id="location"></label><label class="full">Notes<textarea id="notes" rows="3"></textarea></label>
+    </div><div class="actions"><button id="deleteBtn" type="button" class="danger" hidden>Delete</button><span></span><button type="button" id="cancelEvent" class="secondary">Cancel</button><button>Save Event</button></div>
+  </form></dialog>
+
+  <dialog id="detailDialog"><section><div class="dialog-head"><div><p id="detailPerson" class="person"></p><h2 id="detailTitle"></h2></div><button id="closeDetail" class="x">×</button></div><div id="detailBody"></div><div id="driverBox"></div><div class="actions"><button id="calendarBtn" class="secondary">Add to calendar</button><span></span><button id="editBtn" class="secondary">Edit</button></div></section></dialog>
+
+  <dialog id="nameDialog"><form id="nameForm"><h2>What should we call you?</h2><label>Your name<input id="displayName" required></label><div class="actions"><span></span><button>Continue</button></div></form></dialog>
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="app.js"></script>
+</body></html>
